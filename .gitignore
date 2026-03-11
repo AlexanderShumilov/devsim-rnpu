@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+
+# Runtime outputs
+output/
+*.log
+*.csv
+
+# OS/editor
+.DS_Store
+.vscode/
