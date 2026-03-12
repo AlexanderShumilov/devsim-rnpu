@@ -23,9 +23,3 @@ For this comparison, treat these parameters as fixed and equal:
 Only intended variable between the two figures:
 
 - contact mode (`spec_ohmic` vs `neutral`)
-
-Notes for naming interpretation in this folder:
-
-- ignore `run1`/`run2` tags
-- ignore `band_0p1V`
-- ignore `band_bias_v` as a comparison axis
