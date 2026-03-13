@@ -30,11 +30,16 @@ If `import devsim` fails, install DEVSIM first (wheel/package/build) and ensure 
 ## Create and activate virtual environment
 
 ```bash
-cd Devsim
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+If `pip install -r requirements.txt` cannot resolve `devsim` on your platform, install DEVSIM manually (wheel/build from the official DEVSIM distribution), then install the remaining packages:
+
+```bash
+pip install numpy matplotlib pandas
 ```
 
 ## Verify dependencies
