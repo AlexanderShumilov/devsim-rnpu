@@ -169,3 +169,23 @@ python Scripts/DEVSIM_test.py \
 10. Compute slope curve `d(log10|I|)/d(log10|V|)` from IV points.
 11. Export outputs (CSV + PNG; optional band diagram, manifest, stability metrics).
 12. In batch/stability modes, repeat over parameter grids and generate combined summaries/plots.
+
+## 8) Reviewer-Oriented Code Map (Where to Look)
+
+- Simulation parameter block (single continuous CLI block):
+  - `Scripts/DEVSIM_test.py:1717` to `Scripts/DEVSIM_test.py:2014`
+  - What happens: all run controls (geometry, doping, contacts, solver, sweeps, outputs, stability) are declared in one place.
+  - Reviewer note: the function docstring at `Scripts/DEVSIM_test.py:1718` summarizes every parameter group and option names.
+
+- Contact physics derivation:
+  - `Scripts/DEVSIM_test.py:2166` to `Scripts/DEVSIM_test.py:2200`
+  - What happens: `contact_offset_from_args(...)` maps contact mode/workfunction settings into an effective contact-bias offset used by the solver.
+
+- Contact physics application in DEVSIM solve flow:
+  - `Scripts/DEVSIM_test.py:2078` to `Scripts/DEVSIM_test.py:2089`
+  - What happens: contact offset is injected directly into `run_iv(..., contact_offset_v=...)` during IV sweep.
+  - `Scripts/DEVSIM_test.py:2125` to `Scripts/DEVSIM_test.py:2140`
+  - What happens: the same offset is applied when moving to band-diagram extraction bias.
+
+- Repository cleanup:
+  - Silvaco deck text files were removed from the public repo (`planar_rnpu.txt`, `etched_rnpu.txt`).

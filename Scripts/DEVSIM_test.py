@@ -1715,7 +1715,58 @@ def run_stability_batch(args: argparse.Namespace) -> int:
 
 
 def parse_args() -> argparse.Namespace:
+    """Build and parse CLI arguments for the full simulation pipeline.
+
+    Simulation parameters are intentionally kept in one continuous block
+    (between `SIMULATION PARAMETER BLOCK START/END`) so a reviewer can inspect
+    all knobs in one place.
+
+    Parameter catalog (grouped):
+
+    General/output:
+      --prefix, --preset, --output-dir, --figures-dir, --planar-review, --run-number
+
+    Physics/material:
+      --temp-k, --taun-s, --taup-s
+
+    Contact-physics controls:
+      --contact-mode, --wf-ev, --wf-neutral-ev, --wf-boron-ev, --wf-arsenic-ev,
+      --chi-si-ev, --eg-si-ev, --schottky-ref-barrier-ev, --contact-proxy-gain
+
+    Doping/implant:
+      --na, --nd, --doping-mode, --implant-species, --implant-dose-cm2,
+      --implant-peak-um, --implant-sigma-um, --arsenic-dose-cm2,
+      --arsenic-peak-um, --arsenic-sigma-um, --implant-parameter-mode,
+      --implant-lateral-factor, --batch-implant-species
+
+    Oxide/metal-stack geometry:
+      --include-oxide, --native-oxide-thickness-um, --include-sidewall-oxide,
+      --sidewall-oxide-thickness-um, --sidewall-oxide-height-um,
+      --include-metal-stack, --ti-thickness-um, --pd-thickness-um
+
+    Trap block:
+      --enable-traps, --trap-ea-mev, --trap-nga1-cm3, --trap-nga2-cm3,
+      --trap-y1-um, --trap-y2-um, --trap-sigma1-um, --trap-sigma2-um,
+      --trap-lateral-factor, --trap-strength, --batch-trap-ea-mev
+
+    Geometry mode and dimensions:
+      --geometry-mode, --width-cm, --depth-cm, --junction-x-cm,
+      --metal-width-nm, --contact-spacing-um, --channel-length-um, --depth-um,
+      --batch-metal-widths-nm, --batch-contact-spacings-um
+
+    Sweep and solver:
+      --vmin, --vmax, --batch-voltage-windows, --batch-temps-k, --sweep-mode,
+      --max-step, --min-step, --fallback-retries
+
+    Outputs/post-processing:
+      --save-band-diagram, --no-save-band-diagram, --band-bias-v
+
+    Stability analysis:
+      --stability-analysis, --run-and-stability, --stability-widths-nm,
+      --stability-child
+    """
     p = argparse.ArgumentParser(description="DEVSIM RNPU 2D pipeline (planar + etched-like proxy)")
+    # ---------------- SIMULATION PARAMETER BLOCK START ----------------
     p.add_argument("--prefix", default="minimal_base", help="Output file prefix")
     p.add_argument(
         "--preset",
@@ -1944,6 +1995,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=argparse.SUPPRESS,
     )
+    # ----------------- SIMULATION PARAMETER BLOCK END -----------------
     return p.parse_args()
 
 
@@ -2023,6 +2075,9 @@ def solve_one_case(
         trap_lateral_factor=args.trap_lateral_factor,
         trap_strength=args.trap_strength,
         )
+        # CONTACT PHYSICS APPLICATION:
+        # `contact_offset_from_args(args)` converts selected contact mode/workfunction
+        # settings into an effective bias offset injected into the DC sweep.
         iv = run_iv(
         vmin=eff_vmin,
         vmax=eff_vmax,
@@ -2067,6 +2122,8 @@ def solve_one_case(
         )
         bname = GetContactBiasName(RIGHT)
         try:
+            # CONTACT PHYSICS APPLICATION:
+            # band extraction uses the same contact-offset-adjusted bias target.
             # prefer robust stepping to target bias for reliable band extraction.
             v_now = float(get_parameter(device=DEVICE, name=bname))
             robust_move_bias(
@@ -2107,6 +2164,17 @@ def solve_one_case(
 
 
 def contact_offset_from_args(args: argparse.Namespace) -> float:
+    """CONTACT PHYSICS DERIVATION.
+
+    Derives an effective contact-bias offset (Volts) from contact model knobs:
+    - neutral: zero offset
+    - spec_ohmic: species-specific workfunction mapping (boron/arsenic conventions)
+    - schottky_approx: barrier-based mapping using chi, Eg and reference barrier
+    - hole/electron: sign-adjusted generic workfunction delta mapping
+
+    This offset is consumed by `run_iv(..., contact_offset_v=...)` and by
+    band-diagram bias positioning in `solve_one_case`.
+    """
     if args.contact_mode == "neutral":
         return 0.0
     if args.contact_mode == "spec_ohmic":
